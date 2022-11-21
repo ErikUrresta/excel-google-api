@@ -49,15 +49,19 @@
     $references = array();
     $nextStr = "";
     if ($nextToken)
-        $nextStr = "nextpage=$nextToken";
+        $nextStr = "pagetoken=$nextToken";
     $placeSearchURL = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=$query&key=AIzaSyBkUHO1bsn4wDC93ZRcSFgQ58anbl09uSw&$nextStr";
     $placeSearchJSON = file_get_contents($placeSearchURL);
+    // echo '<script>';
+    //     echo 'console.log('.$placeSearchJSON.')';
+    //     echo '</script>';
     $dataArray = json_decode($placeSearchJSON);
     if (isset($dataArray->status) &&$dataArray->status == "OK") {
         foreach( $dataArray->results as $details) {
             array_push($references, $details);
         }
         if (!empty($dataArray->next_page_token) && count($references) < $maxResults ) {
+            sleep(2);
             $nextArray = getAllReferences($query, $maxResults-20 , $dataArray->next_page_token);
             $references = array_merge($references, $nextArray);
 
@@ -68,6 +72,15 @@
         return $references;
     }
    
+}
+
+function getPhoto($photo)
+{
+    // get Photo
+    if($photo){
+      $getImage = file_get_contents("https://maps.googleapis.com/maps/api/place/photo?maxwidth=130&photoreference=$photo&key=AIzaSyBkUHO1bsn4wDC93ZRcSFgQ58anbl09uSw");
+      return $image = base64_encode($getImage);  
+    }
 }
 
 function getZipcode($address)
@@ -102,6 +115,8 @@ function extract_zipcode($address, $remove_statecode = false) {
           if(is_array($data) || is_object($data)){
           foreach ($data as $key=>$value){
             // $zip=getZipcode(urlencode($value->formatted_address));
+            $img=getPhoto(urlencode((isset($value->photos)?$value->photos[0]->photo_reference:'')));
+
           $last_word_start = explode(',', (isset($value->formatted_address)?$value->formatted_address:''));
           $last_word = end($last_word_start);
             $counter++;
@@ -112,8 +127,9 @@ function extract_zipcode($address, $remove_statecode = false) {
               echo '<td>'. (isset($value->formatted_address)?$value->formatted_address:'') .'</td>';
               echo '<td>'. (isset($value->geometry->location->lat)?$value->geometry->location->lat:'') .'</td>';
               echo '<td>'. (isset($value->geometry->location->lng)?$value->geometry->location->lng:'') .'</td>';
-              echo '<td><img src="'. (isset($value->icon)?$value->icon:'') .'" alt="icon"/><a class="d-none" href="#">'. (isset($value->icon)?$value->icon:'') .'</a></td>';
-              // echo '<td>'. (isset($value->photos)?$value->photos[0]->html_attributions[0]:'') .'</td>';
+              // echo '<td><img src="'. (isset($value->icon)?$value->icon:'') .'" alt="icon"/><a class="d-none" href="#">'. (isset($value->icon)?$value->icon:'') .'</a></td>';
+
+              echo '<td><img src="data:image/png;base64,'. (isset($img)?$img:'') .'" alt="icon"/><a class="d-none" href="#">data:image/png;base64,'. (isset($img)?$img:'') .'</a></td>';              // echo '<td>'. (isset($value->photos)?$value->photos[0]->html_attributions[0]:'') .'</td>';
               // echo '<td>'. (isset($value->formatted_address)?$zip:'') .'</td>';
               // echo '<td>'. (isset($value->plus_code->compound_code)?substr(strstr($value->plus_code->compound_code," "), 1):'') .'</td>';
               echo '<td>'. (isset($value->plus_code->compound_code)?$last_word:'') .'</td>';
